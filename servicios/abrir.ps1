@@ -15,7 +15,9 @@ $dash = @{
 if ($Uri -match '^abrir:/*([a-z-]+)/?$' -and $dash.ContainsKey($Matches[1])) {
   $d = $dash[$Matches[1]]
   $dir = Join-Path $base $d[0]
-  if (-not (Get-NetTCPConnection -LocalPort $d[2] -State Listen -ErrorAction SilentlyContinue)) {
+  # Prueba TCP directa (Get-NetTCPConnection tarda ~4 s y el servicio corta a los 10 s)
+  $c = New-Object Net.Sockets.TcpClient; $arriba = $c.ConnectAsync('127.0.0.1', $d[2]).Wait(500) -and $c.Connected; $c.Close()
+  if (-not $arriba) {
     Start-Process python -ArgumentList '-m','streamlit','run',$d[1],'--server.address','127.0.0.1','--server.port',$d[2],'--server.headless','true' -WorkingDirectory $dir -WindowStyle Minimized
     Start-Sleep -Seconds 7
   }
@@ -27,6 +29,8 @@ $ruta = [Uri]::UnescapeDataString(($Uri -replace '^abrir:/*', '')) -replace '/',
 $full = [IO.Path]::GetFullPath($ruta.TrimEnd('\'))
 $raices = @($base, (Join-Path $env:USERPROFILE '.claude'), (Join-Path $env:USERPROFILE '.orca'))
 if (-not ($raices | Where-Object { $full.StartsWith($_, [StringComparison]::OrdinalIgnoreCase) })) { exit 1 }
+# exit 2 = Google Drive (G:) desmontado; la infografia muestra "Drive no disponible"
+if (-not (Test-Path -LiteralPath $base)) { exit 2 }
 if (-not (Test-Path -LiteralPath $full)) { exit 1 }
 $ext = [IO.Path]::GetExtension($full).ToLower()
 if ((Test-Path -LiteralPath $full -PathType Leaf) -and $ext -in '.exe', '.msi', '.lnk', '.scr', '.com', '.url') { exit 1 }

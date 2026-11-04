@@ -28,6 +28,18 @@ def abierto(port):
     except Exception: return False
     finally: s.close()
 def gcloud():
+    # El dashboard usa su token OAuth propio (se renueva solo); revisar ese, no la CLI gcloud
+    tok = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ReporteEjecutivoAbastecimiento", "bq-token.json")
+    if os.path.exists(tok):
+        try:
+            from google.oauth2.credentials import Credentials
+            from google.auth.transport.requests import Request
+            c = Credentials.from_authorized_user_file(tok, ["https://www.googleapis.com/auth/bigquery"])
+            if not c.valid:
+                c.refresh(Request()); open(tok, "w", encoding="utf-8").write(c.to_json())
+            return {"ok": True, "txt": "sesión activa (token propio, se renueva solo)"}
+        except Exception:
+            return {"ok": False, "txt": "token propio vencido: hay que reingresar"}
     g = shutil.which("gcloud")
     if not g: return {"ok": None, "txt": "gcloud no instalado"}
     try:
@@ -110,12 +122,18 @@ class H(BaseHTTPRequestHandler):
         if p.path == "/abrir":
             u = (parse_qs(p.query).get("u") or [""])[0]
             if u.startswith("abrir:") and len(u) < 1500 and '"' not in u:
+                if o is None:  # navegación directa (enlace en VS Code/.md): lanzar sin esperar y avisar en la pestaña
+                    subprocess.Popen(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", PS1, u],
+                                     creationflags=0x08000000, stdin=subprocess.DEVNULL, stdout=LOG, stderr=subprocess.STDOUT)
+                    self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers()
+                    self.wfile.write("<body style='font:16px sans-serif;background:#111;color:#ddd;padding:2em'>Actualizando datos y abriendo la infografía en tu navegador (≈10 s)… puedes cerrar esta pestaña.</body>".encode("utf-8")); return
                 try:
                     rc = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", PS1, u],
-                                        creationflags=0x08000000, stdin=subprocess.DEVNULL, stdout=LOG, stderr=subprocess.STDOUT, timeout=25).returncode
+                                        creationflags=0x08000000, stdin=subprocess.DEVNULL, stdout=LOG, stderr=subprocess.STDOUT, timeout=10).returncode
                 except subprocess.TimeoutExpired:
-                    rc = 0
-                self.send_response(200 if rc == 0 else 422); self.send_header("Access-Control-Allow-Origin", "*"); self.end_headers(); self.wfile.write(b"ok" if rc == 0 else b"fallo"); return
+                    rc = 3  # Drive colgado o muy lento
+                cod, txt = {0: (200, b"ok"), 2: (503, b"drive"), 3: (504, b"lento")}.get(rc, (422, b"fallo"))
+                self.send_response(cod); self.send_header("Access-Control-Allow-Origin", "*"); self.end_headers(); self.wfile.write(txt); return
         self.send_response(404); self.end_headers()
 
 if __name__ == "__main__":

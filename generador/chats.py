@@ -55,10 +55,23 @@ def chats(data_txt, maximo=5):
     fs = glob.glob("\\\\?\\" + R + "\\*\\*.jsonl") if os.name == "nt" else glob.glob(R + "/*/*.jsonl")
     ses, P = [], proyectos(data_txt)
     claves = sorted({a.strip("/") for _, al in P for a in al})
+    cf = os.path.join(os.environ.get("TEMP", R), "infografia-chats-cache.json")  # caché por (mtime, tamaño): solo relee los chats que cambiaron
+    try: cache = json.load(open(cf, encoding="utf-8"))
+    except (OSError, ValueError): cache = {}
+    if cache.get("claves") != claves: cache = {"claves": claves}
+    nuevo = {"claves": claves}
     for f in fs:
-        if os.path.getsize(f) < 3000: continue
-        try: ses.append(sesion(f, claves))
-        except OSError: pass
+        try: st = os.stat(f)
+        except OSError: continue
+        if st.st_size < 3000: continue
+        k, firma = os.path.basename(f), [st.st_mtime, st.st_size]
+        c = cache.get(k)
+        if not (c and c[0] == firma):
+            try: c = [firma, list(sesion(f, claves))]
+            except OSError: continue
+        nuevo[k] = c; ses.append(tuple(c[1]))
+    try: json.dump(nuevo, open(cf, "w", encoding="utf-8"), ensure_ascii=False)
+    except OSError: pass
     out = {}
     pts = [[sum(low.count(a) for a in al) + (20 if any(a in s["cwd"].replace("\\", "/") + "/" for a in al) else 0) for _, al in P] for low, s in ses]
     infog = [i for i, (n, al) in enumerate(P) if "/infografia/" in al]
@@ -84,10 +97,19 @@ def pbis(data_txt):
         n = re.findall(r'\{n:"([^"]+)"', data_txt[:m.start()])
         ruta = m.group(1).rstrip("/")
         hall = []
-        for raiz, dirs, fs in os.walk(base + ruta):
-            prof = raiz[len(base + ruta):].count(os.sep) + raiz[len(base + ruta):].count("/")
-            dirs[:] = [d for d in dirs if prof < 3 and not re.search(r"respaldo|backup|node_modules|^\.|\.Report$|\.SemanticModel$|\.Dataset$", d, re.I)]
-            hall += [(raiz[len(base):].replace("\\", "/") + "/" + f) for f in fs if f.lower().endswith((".pbip", ".pbix"))]
+        pila = [(base + ruta, 0)]  # scandir en vez de os.walk: en Google Drive (G:) os.walk es muy lento
+        while pila:
+            raiz, prof = pila.pop()
+            try:
+                with os.scandir(raiz) as it:
+                    for e in it:
+                        if e.is_dir(follow_symlinks=False):
+                            if prof < 3 and not re.search(r"respaldo|backup|node_modules|^\.|\.Report$|\.SemanticModel$|\.Dataset$", e.name, re.I):
+                                pila.append((os.path.join(raiz, e.name), prof + 1))
+                        elif e.name.lower().endswith((".pbip", ".pbix")):
+                            hall.append(raiz[len(base):].replace("\\", "/") + "/" + e.name)
+            except OSError:
+                pass
         if hall and n: out[n[-1]] = sorted(hall)[:6]
     return out
 

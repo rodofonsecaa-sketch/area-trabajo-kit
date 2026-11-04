@@ -324,7 +324,7 @@ if(LOCAL){setInterval(()=>{if(!document.hidden)leeEstado()},8000);setTimeout(lee
 document.addEventListener('click',e=>{
   const a=e.target.closest&&e.target.closest('a[href^="abrir:"]');if(!a||!LOCAL)return;
   e.preventDefault();e.stopPropagation();const u=a.getAttribute('href');
-  toast('Abriendo…');fetch('http://127.0.0.1:8799/abrir?u='+encodeURIComponent(u)).then(r=>{if(!r.ok)toast('⚠ No se pudo abrir: '+decodeURIComponent(u.replace(/^abrir:\/*/,'')))}).catch(()=>{location.href=u});
+  toast('Abriendo…');fetch('http://127.0.0.1:8799/abrir?u='+encodeURIComponent(u)).then(r=>{if(r.status===503||r.status===504)toast('⚠ Drive no disponible: Google Drive (G:) '+(r.status===503?'está desmontado':'no responde')+'. Reinícialo y vuelve a probar.');else if(!r.ok)toast('⚠ No se pudo abrir: '+decodeURIComponent(u.replace(/^abrir:\/*/,'')))}).catch(()=>{location.href=u});
 },true);
 document.addEventListener('click',e=>{
   if(e.target.closest('a.art'))return;

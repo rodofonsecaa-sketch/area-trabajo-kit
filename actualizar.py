@@ -19,28 +19,67 @@ def rel(p):
     return p.relative_to(BASE).as_posix()
 
 
+def recorrer(carpeta, profundidad, saltar=lambda d: False, nivel=0):
+    """Como os.walk pero con scandir: en Google Drive (G:) os.walk tarda segundos por sus islink/stat extra."""
+    dirs, archivos = [], []
+    try:
+        with os.scandir(carpeta) as it:
+            for e in it:
+                try:
+                    (dirs if e.is_dir(follow_symlinks=False) else archivos).append(e.name)
+                except OSError:
+                    pass
+    except OSError:
+        return
+    yield carpeta, nivel, archivos
+    if nivel < profundidad:
+        for d in dirs:
+            if not saltar(d):
+                yield from recorrer(os.path.join(carpeta, d), profundidad, saltar, nivel + 1)
+
+
 def visibles(carpeta, maximo=3, profundidad=3):
     hallados = []
-    for raiz, dirs, archivos in os.walk(carpeta):
-        nivel = len(Path(raiz).relative_to(carpeta).parts)
-        dirs[:] = [d for d in dirs if d not in SALTAR and not d.endswith((".SemanticModel", ".Report"))]
-        if nivel >= profundidad:
-            dirs[:] = []
+    for raiz, nivel, archivos in recorrer(str(carpeta), profundidad,
+                                          lambda d: d in SALTAR or d.endswith((".SemanticModel", ".Report"))):
         for a in archivos:
             ext = Path(a).suffix.lower()
-            if ext in VER and not (ext == ".html" and ((Path(raiz) / "hyperframes.json").exists() or "Dev-respaldo" in Path(raiz).parts)):
+            if ext in VER and not (ext == ".html" and ("hyperframes.json" in archivos or "Dev-respaldo" in Path(raiz).parts)):
                 hallados.append((VER.index(ext), nivel, Path(raiz) / a))
     hallados.sort(key=lambda x: (x[0], x[1], str(x[2])))
     return [{"t": f.stem[:40], "r": rel(f)} for _, _, f in hallados[:maximo]]
 
 
+CACHE = Path(__file__).with_name("respaldos") / "cache_respaldos.json"
+
+
 def proyectos():
     carpetas = [d for d in BASE.iterdir() if d.is_dir() and d.name not in IGNORAR_RAIZ and not d.name.startswith(".")]
+    # Las carpetas de respaldo son grandes y casi no cambian: se re-escanean 1 vez al día (en Drive tardan segundos)
+    try:
+        cache = json.loads(CACHE.read_text(encoding="utf-8"))
+        if datetime.datetime.now().timestamp() - cache.get("_ts", 0) > 86400:
+            cache = {}
+    except (OSError, ValueError):
+        cache = {}
+    nuevo = not cache
     out = []
     for d in sorted(carpetas, key=lambda x: x.name.lower()):
         try:
+            if "respaldo" in d.name.lower():
+                if d.name not in cache:
+                    cache[d.name], nuevo = visibles(d), True
+                ver = cache[d.name]
+            else:
+                ver = visibles(d)
             out.append({"n": d.name.replace("-", " "), "ruta": rel(d), "tag": "Detectado",
-                        "d": "Carpeta detectada automáticamente.", "ver": visibles(d)})
+                        "d": "Carpeta detectada automáticamente.", "ver": ver})
+        except OSError:
+            pass
+    if nuevo:
+        try:
+            cache["_ts"] = datetime.datetime.now().timestamp()
+            CACHE.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
         except OSError:
             pass
     return out
@@ -111,6 +150,22 @@ try:
     _u = Path(__file__).with_name("uso.js")
     if not _u.exists() or time.time() - _u.stat().st_mtime > 120:
         subprocess.Popen(["python", str(Path(__file__).with_name("servicios") / "uso-tokens.py")], creationflags=0x08000000)
+except Exception:
+    pass
+
+# Versiones: cada cambio de la página o de data.js queda copiado en respaldos/versiones (se guardan las últimas 30 de cada uno)
+try:
+    import hashlib, shutil
+    _v = Path(__file__).with_name("respaldos") / "versiones"
+    _v.mkdir(parents=True, exist_ok=True)
+    for _n in ("index.html", "app.js", "data.js"):
+        _f = Path(__file__).with_name(_n)
+        _h = hashlib.md5(_f.read_bytes()).hexdigest()[:8]
+        _prev = sorted(_v.glob(_n + ".*"))
+        if not _prev or not _prev[-1].name.endswith(_h):
+            shutil.copy2(_f, _v / f"{_n}.{datetime.datetime.now():%Y%m%d-%H%M%S}.{_h}")
+            for _o in sorted(_v.glob(_n + ".*"))[:-30]:
+                _o.unlink()
 except Exception:
     pass
 
