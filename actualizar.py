@@ -9,6 +9,7 @@ BASE = Path(_b) if _b else Path(__file__).resolve().parent.parent
 WS = BASE
 HOME = Path.home() / ".claude"
 OUT = Path(__file__).with_name("auto.js")
+ESPEJO = BASE / "Claude-config"  # copia en Drive de ~/.claude (sync-a-drive.ps1): los accesos abren desde G:
 
 IGNORAR_RAIZ = {"Infografia", "_archivo", "respaldos"}
 SALTAR = {"node_modules", ".git", ".venv", "venv", "__pycache__", "respaldos", "backups", "_archivo", ".next", "dist", "build"}
@@ -96,9 +97,21 @@ def descripcion(skill_md):
     return "Skill instalada."
 
 
+def enlace(p):
+    """Ruta para abrir: su copia en el espejo de Drive si existe; si no, la original."""
+    p = Path(p)
+    e = ESPEJO / "mcp-servers.json" if p == Path.home() / ".claude.json" else None
+    if e is None:
+        try:
+            e = ESPEJO / p.relative_to(HOME)
+        except ValueError:
+            return p.as_posix()
+    return e.as_posix() if e.exists() else p.as_posix()
+
+
 def skills():
     d = HOME / "skills"
-    return [{"id": s.name, "n": s.name, "d": descripcion(s / "SKILL.md"), "r": (s / "SKILL.md").as_posix()}
+    return [{"id": s.name, "n": s.name, "d": descripcion(s / "SKILL.md"), "r": enlace(s / "SKILL.md")}
             for s in sorted(d.iterdir())
             if s.is_dir() and s.name != "synced" and (s / "SKILL.md").exists()] if d.exists() else []
 
@@ -111,12 +124,12 @@ def mcp():
                 servidores[k] = f.as_posix()
         except (OSError, ValueError):
             pass
-    return [{"id": k, "n": k, "d": "Servidor MCP configurado.", "r": servidores[k]} for k in sorted(servidores)]
+    return [{"id": k, "n": k, "d": "Servidor MCP configurado.", "r": enlace(servidores[k])} for k in sorted(servidores)]
 
 
 def scripts():
     d = HOME / "scripts"
-    return [{"id": f.name, "n": f.name, "d": "Script de orquestación.", "r": f.as_posix()}
+    return [{"id": f.name, "n": f.name, "d": "Script de orquestación.", "r": enlace(f)}
             for f in sorted(d.glob("*.ps1"))] if d.exists() else []
 
 
@@ -132,6 +145,13 @@ def conectores():
         for k in json.loads((HOME / "mcp-needs-auth-cache.json").read_text(encoding="utf-8")):
             est[k.replace("claude.ai ", "")] = "pendiente"
     except (OSError, ValueError):
+        pass
+    try:  # REG en data.js: conectores sin uso se muestran como "falta autorizar"
+        import re
+        m = re.search(r"conectoresSinUso:\s*\[([^\]]*)\]", OUT.with_name("data.js").read_text(encoding="utf-8"))
+        for k in re.findall(r'"([^"]+)"', m.group(1) if m else ""):
+            est[k] = "pendiente"
+    except OSError:
         pass
     return est
 
