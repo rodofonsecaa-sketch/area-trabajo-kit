@@ -28,8 +28,8 @@ const guessLogo=(id,n)=>{const k=String(n).toLowerCase(),e=(k.split('.').pop()||
 });
 const MOD=A.mod||{},CAM=A.cambios||{};
 D.categorias.forEach(c=>{c.items.forEach(i=>{const t=[CAM[c.id+'|'+i.n],i.ruta&&MOD[i.ruta],...(i.inc||[]).map(x=>x&&MOD[x.id])].filter(Boolean);i.t=t.length?Math.max(...t):0});
-  const ord=[...c.items].sort((x,y)=>y.t-x.t);ord.forEach((i,n)=>{if(i.t)i.ord=n+1});
-  if(c.id!=='ia')c.items.sort((x,y)=>y.t-x.t)});
+  const ord=[...c.items].sort((x,y)=>y.t-x.t);ord.forEach((i,n)=>{if(i.t&&c.id!=='skills')i.ord=n+1});
+  if(c.id!=='ia'&&c.id!=='skills')c.items.sort((x,y)=>y.t-x.t)});
 ALL=[];D.categorias.forEach(c=>c.items.forEach(i=>{i.cat=c;i.k=ALL.length;ALL.push(i)}));
 const SK=ALL.find(i=>/^Skills/.test(i.n)&&i.cat.id==='claude');if(SK&&A.skills)SK.inc=A.skills;
 const CN=A.conectores||{},cn=p=>{const k=Object.keys(CN).find(k=>k===p||k.startsWith(p)||k.endsWith(p));return k&&CN[k]};
@@ -172,8 +172,8 @@ function vCat(id){
     iaNota='<p class="cnota">Ordenadas por uso real, de la que más uso a la que menos (según cascada.log): '+K.filter(k=>USO.ias[k[0]]).sort((x,y)=>USO.ias[y[0]]-USO.ias[x[0]]).map(k=>k[1]+' '+USO.ias[k[0]]).join(' · ')+'. Las que no aparecen aún no las he usado.</p>';
   }
   const es=[...new Set(c.items.map(i=>i.e))];
-  return '<section class="vh" style="--cc:'+c.color+'"><span class="bar"></span><div><p class="kick">'+esc(c.grupo)+'</p><h2>'+esc(c.nombre)+'</h2><p>'+esc(c.desc)+' · '+(c.cuenta||c.items.length)+'</p></div></section>'+'<p class="cnota">El número de cada tarjeta es su orden por última modificación: 1 = lo más reciente.'+(id==='ia'?' (Aquí el orden principal es por uso.)':'')+'</p>'+(c.nota?'<p class="cnota">'+esc(c.nota)+'</p>':'')+iaNota+(id==='pro'?'<div class="acts" style="margin:4px 0 14px"><button class="btn pri" data-v="prog">⚙ Programación: encender, horarios y destinatarios</button></div>':'')+
-    (es.length>1?'<div class="fil"><button class="fb'+(fil?'':' on')+'" data-f="">Todos</button>'+es.map(e=>'<button class="fb'+(fil===e?' on':'')+'" data-f="'+e+'">'+esc(D.estados[e]||e)+'</button>').join('')+'</div>':'')+list(its)+(id==='ahorro'?usoPanel():'');
+  return '<section class="vh" style="--cc:'+c.color+'"><span class="bar"></span><div><p class="kick">'+esc(c.grupo)+'</p><h2>'+esc(c.nombre)+'</h2><p>'+esc(c.desc)+' · '+(c.cuenta||c.items.length)+'</p></div></section>'+(id==='skills'?'':'<p class="cnota">El número de cada tarjeta es su orden por última modificación: 1 = lo más reciente.'+(id==='ia'?' (Aquí el orden principal es por uso.)':'')+'</p>')+(c.nota?'<p class="cnota">'+esc(c.nota)+'</p>':'')+iaNota+(id==='pro'?'<div class="acts" style="margin:4px 0 14px"><button class="btn pri" data-v="prog">⚙ Programación: encender, horarios y destinatarios</button></div>':'')+
+    (es.length>1?'<div class="fil"><button class="fb'+(fil?'':' on')+'" data-f="">Todos</button>'+es.map(e=>'<button class="fb'+(fil===e?' on':'')+'" data-f="'+e+'">'+esc(D.estados[e]||e)+'</button>').join('')+'</div>':'')+(id==='skills'?[...new Set(its.map(i=>i.g))].map(g=>'<h3 class="sec" style="--cc:'+c.color+'"><i></i>'+esc(g)+' <small>'+its.filter(i=>i.g===g).length+'</small></h3>'+list(its.filter(i=>i.g===g))).join(''):list(its))+(id==='ahorro'?usoPanel():'');
 }
 function vTodo(){
   return '<section class="vh"><span class="bar"></span><div><h2>Todo</h2><p>'+ALL.length+' piezas: '+ALL.filter(i=>i.cat.grupo!=='Proyectos').length+' herramientas y '+ALL.filter(i=>i.cat.grupo==='Proyectos').length+' proyectos.</p></div></section>'+
