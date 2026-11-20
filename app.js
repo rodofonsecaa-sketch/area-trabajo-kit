@@ -14,11 +14,15 @@ const byRuta=(i,x)=>i.ruta&&norm(i.ruta)===norm(x.ruta);
 const every=()=>D.categorias.flatMap(c=>c.items);
 function init(){
 D=window.DATA;A=window.AUTO||{};
+const guessLogo=(id,n)=>{const k=String(n).toLowerCase(),e=(k.split('.').pop()||''),by={ps1:'powershell',py:'python',sh:'gnubash',md:'markdown',json:'json',html:'html5',js:'json'};
+  if(id==='skills')return 'claude';if(id==='pro')return 'carpeta';
+  if(id==='orq')return by[e]||'powershell';
+  const s=k.replace(/[^a-z0-9]/g,'');return Object.keys(L).find(z=>z[0]!=='_'&&s.indexOf(z)>=0)||'claude'};
 [['skills',A.skills,byName],['mcp',A.mcp,byName],['orq',A.scripts,byName],['pro',A.proyectos,byRuta]].forEach(([id,list,f])=>{
   const c=cat(id);if(!c||!list)return;
   list.forEach(x=>{
     const hit=(id==='pro'?c.items:every()).filter(i=>f(i,x));
-    if(!hit.length)c.items.push({n:x.n,d:x.d,e:'activo',tag:'Nuevo',ruta:x.ruta,ver:x.ver,inc:x.r?[x]:null});
+    if(!hit.length)c.items.push({n:x.n,logo:guessLogo(id,x.n),d:x.d,e:'activo',tag:'Nuevo',ruta:x.ruta,ver:x.ver,inc:x.r?[x]:null});
     else if(x.r)hit.forEach(i=>(i.inc=i.inc||[]).push(x));
   });
 });
