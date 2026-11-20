@@ -1,14 +1,14 @@
-// Datos de la infografía. Para sumar algo nuevo: agrega una línea {n, d, e} en la categoría que corresponda.
+// Datos del Área de Trabajo. Para sumar algo nuevo: agrega una línea {n, d, e} en la categoría que corresponda.
 // e = activo | respaldo | pendiente | descartado. Rutas relativas a "base"; las que parten con C:/ son absolutas.
 // En proyectos: ruta = carpeta, ver = archivos para visualizar [{t: etiqueta, r: ruta}].
 // Ítem completo: {n:"Nombre", ap:{a:"A qué se dedica", c:["Cómo me ayuda 1","Cómo me ayuda 2"], u:"Cuándo lo uso"}, logo:"claude", tag:"IA", d:"Descripción corta", e:"activo"}
 window.DATA = {
-  titulo: "Cómo trabajo hoy",
+  titulo: "Área de Trabajo",
   autor: "Nombre Apellido",
   rol: "Mi área",
   actualizado: "2026-10-26",
   linea: [
-    {f:"2026-10-26", t:"Armé mi infografía"}
+    {f:"2026-10-26", t:"Armé mi Área de Trabajo"}
   ],
 
   abridor: false,

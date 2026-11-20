@@ -1,4 +1,4 @@
-"""Suma los tokens de Claude Code por dia leyendo los historiales (~/.claude/projects/*/*.jsonl) y escribe uso.js en la infografia.
+"""Suma los tokens de Claude Code por dia leyendo los historiales (~/.claude/projects/*/*.jsonl) y escribe uso.js en el Área de Trabajo.
 Usa cache por archivo (tamano) para que las siguientes corridas sean rapidas."""
 import os, json, glob, datetime
 HOME = os.path.expanduser("~")

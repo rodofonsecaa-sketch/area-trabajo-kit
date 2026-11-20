@@ -1,9 +1,9 @@
 """Detecta skills, MCP, scripts y carpetas de proyectos y escribe auto.js.
-La infografía suma como "Nuevo" lo que no esté ya en data.js. Corre solo al iniciar cada sesión de Claude."""
+El Área de Trabajo suma como "Nuevo" lo que no esté ya en data.js. Corre solo al iniciar cada sesión de Claude."""
 import json, os, re, datetime
 from pathlib import Path
 
-# BASE = carpeta de proyectos, tomada de "base" en data.js (si está vacía, la carpeta que contiene Infografia)
+# BASE = carpeta de proyectos, tomada de "base" en data.js (si está vacía, la carpeta que contiene Area-de-Trabajo)
 _b = re.search(r'base:\s*"([^"]*)"', Path(__file__).with_name("data.js").read_text(encoding="utf-8")).group(1)
 BASE = Path(_b) if _b else Path(__file__).resolve().parent.parent
 WS = BASE
@@ -11,7 +11,7 @@ HOME = Path.home() / ".claude"
 OUT = Path(__file__).with_name("auto.js")
 ESPEJO = BASE / "Claude-config"  # copia en Drive de ~/.claude (sync-a-drive.ps1): los accesos abren desde G:
 
-IGNORAR_RAIZ = {"Infografia", "_archivo", "respaldos"}
+IGNORAR_RAIZ = {"Area-de-Trabajo", "_archivo", "respaldos"}
 SALTAR = {"node_modules", ".git", ".venv", "venv", "__pycache__", "respaldos", "backups", "_archivo", ".next", "dist", "build"}
 VER = [".html", ".pdf", ".mp4", ".pptx", ".pbip", ".rbxlx", ".docx", ".xlsx"]
 
@@ -156,8 +156,80 @@ def conectores():
     return est
 
 
+def ultima(ruta, profundidad=4):
+    """Fecha (epoch) del archivo más reciente dentro de una carpeta, o de un archivo."""
+    ruta = str(ruta)
+    try:
+        if os.path.isfile(ruta):
+            return os.stat(ruta).st_mtime
+    except OSError:
+        return None
+    mx = 0
+    for d, _, archivos in recorrer(ruta, profundidad, lambda x: x in SALTAR or x.startswith(".")):
+        for a in archivos:
+            try:
+                mx = max(mx, os.stat(os.path.join(d, a)).st_mtime)
+            except OSError:
+                pass
+    return mx or None
+
+
+def modificados(proys, skl, scr):
+    """Última modificación por ruta (proyectos/automatizaciones) y por nombre (skills y scripts)."""
+    import re
+    rutas = set(re.findall(r'ruta:\s*"([^"]+)"', OUT.with_name("data.js").read_text(encoding="utf-8")))
+    rutas |= {x["ruta"] for x in proys}
+    mod = {}
+    for r in rutas:
+        t = ultima(r if re.match(r"^[A-Za-z]:", r) else BASE / r)
+        if t:
+            mod[r] = round(t)
+    for x in skl + scr:
+        t = ultima(x["r"], 0)
+        if t:
+            mod[x["id"]] = round(t)
+    return mod
+
+
+def cambios():
+    """Cuándo cambió cada ficha de data.js (para numerar de la más reciente a la más antigua).
+    Guarda un hash por ficha en fechas.json; la primera vez reconstruye el historial con los respaldos data.js.bak-*."""
+    import subprocess, hashlib
+    dj = OUT.with_name("data.js")
+    est = OUT.with_name("fechas.json")
+    js = Path(__file__).with_name("generador") / "volcar_items.js"
+
+    def volcar(f):
+        try:
+            r = subprocess.run(["node", str(js), str(f)], capture_output=True, text=True, encoding="utf-8", timeout=30, creationflags=0x08000000)
+            return json.loads(r.stdout.strip().splitlines()[-1])
+        except Exception:
+            return None
+
+    def aplicar(estado, items, t):
+        for k, v in items.items():
+            h = hashlib.md5(v.encode("utf-8")).hexdigest()[:10]
+            if k not in estado or estado[k]["h"] != h:
+                estado[k] = {"h": h, "t": round(t)}
+    try:
+        estado = json.loads(est.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        estado = {}
+        for b in sorted(OUT.parent.glob("data.js.bak-*"), key=lambda x: x.stat().st_mtime):
+            it = volcar(b)
+            if it:
+                aplicar(estado, it, b.stat().st_mtime)
+    it = volcar(dj)
+    if it:
+        aplicar(estado, it, datetime.datetime.now().timestamp() if est.exists() else dj.stat().st_mtime)
+        est.write_text(json.dumps(estado, ensure_ascii=False), encoding="utf-8")
+    return {k: v["t"] for k, v in estado.items()}
+
+
 datos = {"generado": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
          "skills": skills(), "mcp": mcp(), "scripts": scripts(), "proyectos": proyectos(), "conectores": conectores()}
+datos["mod"] = modificados(datos["proyectos"], datos["skills"], datos["scripts"])
+datos["cambios"] = cambios()
 OUT.write_text("window.AUTO = " + json.dumps(datos, ensure_ascii=False, indent=1) + ";\n", encoding="utf-8")
 import sys
 sys.path.insert(0, str(Path(__file__).with_name("generador")))

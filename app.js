@@ -1,4 +1,6 @@
 (function(){
+const fe=t=>{const d=new Date(t*1000);return d.toLocaleDateString('es-CL')+' '+d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})};
+const ordb=i=>i.ord?'<b class="ord" title="N.º '+i.ord+' por última modificación · '+fe(i.t)+'">'+i.ord+'</b>':'';
 let D=window.DATA,A=window.AUTO||{},ALL=[];const L=window.LOGOS||{_mono:{}},CFG=window.CFG||{};
 const LOCAL=location.protocol==='file:';
 const $=s=>document.querySelector(s);
@@ -20,6 +22,10 @@ D=window.DATA;A=window.AUTO||{};
     else if(x.r)hit.forEach(i=>(i.inc=i.inc||[]).push(x));
   });
 });
+const MOD=A.mod||{},CAM=A.cambios||{};
+D.categorias.forEach(c=>{c.items.forEach(i=>{const t=[CAM[c.id+'|'+i.n],i.ruta&&MOD[i.ruta],...(i.inc||[]).map(x=>x&&MOD[x.id])].filter(Boolean);i.t=t.length?Math.max(...t):0});
+  const ord=[...c.items].sort((x,y)=>y.t-x.t);ord.forEach((i,n)=>{if(i.t)i.ord=n+1});
+  if(c.id!=='ia')c.items.sort((x,y)=>y.t-x.t)});
 ALL=[];D.categorias.forEach(c=>c.items.forEach(i=>{i.cat=c;i.k=ALL.length;ALL.push(i)}));
 const SK=ALL.find(i=>/^Skills/.test(i.n)&&i.cat.id==='claude');if(SK&&A.skills)SK.inc=A.skills;
 const CN=A.conectores||{},cn=p=>{const k=Object.keys(CN).find(k=>k===p||k.startsWith(p)||k.endsWith(p));return k&&CN[k]};
@@ -35,11 +41,12 @@ const carga=f=>new Promise(r=>{const s=document.createElement('script');s.src=f+
 function recargar(manual){
   const b=$('#refresh');if(b)b.classList.add('spin');
   if(manual&&D.abridor){if(LOCAL)fetch('http://127.0.0.1:8799/abrir?u=abrir:actualizar-local',{mode:'no-cors'}).catch(()=>{location.href='abrir:actualizar-local'});else{const a=document.createElement('a');a.href='abrir:actualizar-local';a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}toast(LOCAL?'Leyendo todo Claude en VS Code…':'Actualizando en tu PC sin salir de esta página; los cambios llegan aquí en la próxima publicación');if(LOCAL)return setTimeout(()=>recargar(0),6000)}
-  (LOCAL?Promise.all([carga('data.js'),carga('auto.js'),carga('chats.js'),carga('uso.js')]):Promise.resolve()).then(()=>{
+  (LOCAL?Promise.all([carga('data.js'),carga('auto.js'),carga('chats.js'),carga('uso.js'),carga('bqdata.js')]):Promise.resolve()).then(()=>{
     if(LOCAL&&window.DATA!==D)init();
-    nav();if($('#sheet').hidden&&!$('#q').value.trim())go(view,1);
+    nav();if($('#sheet').hidden&&!$('#q').value.trim()&&view!=='prog')go(view,1);
     sello();if(b)setTimeout(()=>b.classList.remove('spin'),500);
-    if(manual)toast(LOCAL?'Datos recargados':'Vista actualizada; los datos nuevos llegan al republicar');
+    if(manual&&LOCAL)setTimeout(()=>recargar(0),120000);
+    if(manual)toast(LOCAL?'Datos recargados (BigQuery tarda ~2 min)':'Vista actualizada; los datos nuevos llegan al republicar');
   });
 }
 
@@ -83,8 +90,8 @@ const recientes=()=>{const o=[];ALL.forEach(i=>chatsDe(i).forEach(s=>o.push([s,i
   const l=o.sort((a,b)=>b[0].f<a[0].f?-1:1).filter(x=>!v.has(x[0].id)&&v.add(x[0].id)).slice(0,6);if(!l.length)return'';
   return '<section class="reci"><h3 class="qh">Actividad reciente <small>los últimos chats de mis proyectos · se abren en Claude Code</small></h3><div class="rgrid">'+l.map(([s,i])=>'<a class="rc" href="'+chatU(s)+'" style="--cc:'+i.cat.color+'" title="'+esc(s.u||s.t)+'"><span class="rp">'+lgs(i)+esc(i.n)+'</span><span class="rt">'+esc(s.t)+'</span><span class="rf">'+esc(s.f)+'</span></a>').join('')+'</div></section>'};
 const PASOS=['Pido','Claude divide','IAs apoyan','Auditor revisa','Entrego'];
-const card=i=>'<div class="card" role="button" tabindex="0" data-k="'+i.k+'" style="--cc:'+i.cat.color+'"><span class="logos">'+lgs(i)+'</span><span class="cb"><span class="h3">'+(i.rk&&view==='ia'?'<b class="rk">'+i.rk+'</b>':'')+esc(i.n)+'</span><span class="p">'+esc(i.d)+'</span></span><span class="meta">'+chip(i.e)+tag(i)+(i.ap?'<span class="tag how">Qué hace y cómo ayuda</span>':'')+(i.ruta||i.src||i.inc||i.art?'<span class="tag how">Ver cómo está hecho</span>':'')+'</span>'+qa(i)+'</div>';
-const appi=i=>'<button class="appi" data-k="'+i.k+'"><span class="ic">'+lg(slugs(i)[0],i.cat,i.n)+(i.e!=='activo'?'<i class="badge" style="--sc:'+SC[i.e]+'"></i>':'')+'</span><span class="al">'+esc(i.n)+'</span></button>';
+const card=i=>'<div class="card" role="button" tabindex="0" data-k="'+i.k+'" style="--cc:'+i.cat.color+'"><span class="logos">'+lgs(i)+'</span><span class="cb"><span class="h3">'+(i.rk&&view==='ia'?'<b class="rk">'+i.rk+'</b>':ordb(i))+esc(i.n)+'</span><span class="p">'+esc(i.d)+'</span></span><span class="meta">'+chip(i.e)+tag(i)+(i.ap?'<span class="tag how">Qué hace y cómo ayuda</span>':'')+(i.ruta||i.src||i.inc||i.art?'<span class="tag how">Ver cómo está hecho</span>':'')+'</span>'+qa(i)+'</div>';
+const appi=i=>'<button class="appi" data-k="'+i.k+'"><span class="ic">'+lg(slugs(i)[0],i.cat,i.n)+(i.e!=='activo'?'<i class="badge" style="--sc:'+SC[i.e]+'"></i>':'')+'</span><span class="al">'+esc(i.n)+'</span>'+ordb(i)+'</button>';
 const list=items=>items.length?(CFG.apps?'<div class="apps">'+items.map(appi).join('')+'</div>':'<div class="grid">'+items.map(card).join('')+'</div>'):'<p class="empty">Nada por aquí.</p>';
 
 const FEAT=[
@@ -161,7 +168,7 @@ function vCat(id){
     iaNota='<p class="cnota">Ordenadas por uso real, de la que más uso a la que menos (según cascada.log): '+K.filter(k=>USO.ias[k[0]]).sort((x,y)=>USO.ias[y[0]]-USO.ias[x[0]]).map(k=>k[1]+' '+USO.ias[k[0]]).join(' · ')+'. Las que no aparecen aún no las he usado.</p>';
   }
   const es=[...new Set(c.items.map(i=>i.e))];
-  return '<section class="vh" style="--cc:'+c.color+'"><span class="bar"></span><div><p class="kick">'+esc(c.grupo)+'</p><h2>'+esc(c.nombre)+'</h2><p>'+esc(c.desc)+' · '+(c.cuenta||c.items.length)+'</p></div></section>'+(c.nota?'<p class="cnota">'+esc(c.nota)+'</p>':'')+iaNota+
+  return '<section class="vh" style="--cc:'+c.color+'"><span class="bar"></span><div><p class="kick">'+esc(c.grupo)+'</p><h2>'+esc(c.nombre)+'</h2><p>'+esc(c.desc)+' · '+(c.cuenta||c.items.length)+'</p></div></section>'+'<p class="cnota">El número de cada tarjeta es su orden por última modificación: 1 = lo más reciente.'+(id==='ia'?' (Aquí el orden principal es por uso.)':'')+'</p>'+(c.nota?'<p class="cnota">'+esc(c.nota)+'</p>':'')+iaNota+(id==='pro'?'<div class="acts" style="margin:4px 0 14px"><button class="btn pri" data-v="prog">⚙ Programación: encender, horarios y destinatarios</button></div>':'')+
     (id==='skills'&&A.skills?'<div class="inst"><b>Las '+A.skills.length+' skills instaladas</b><div class="acts">'+A.skills.map(s=>link(s.r,esc(s.n)+' <small>SKILL.md</small>')).join('')+'</div></div>':'')+
     (es.length>1?'<div class="fil"><button class="fb'+(fil?'':' on')+'" data-f="">Todos</button>'+es.map(e=>'<button class="fb'+(fil===e?' on':'')+'" data-f="'+e+'">'+esc(D.estados[e]||e)+'</button>').join('')+'</div>':'')+list(its)+(id==='ahorro'?usoPanel():'');
 }
@@ -180,10 +187,10 @@ function vFlujo(){
   return '<section class="vh"><span class="bar"></span><div><p class="kick">Orquestación</p><h2>Cómo fluye el trabajo</h2><p>Seis pasos, de mi pedido a la entrega.</p></div></section><ol class="flow">'+
     step(1,esc((window.DATA.autor||'').split(' ')[0])+' pide','<p>Un pedido en lenguaje natural, en el chat de Claude Code dentro de VS Code.</p>',lg('vscode',cl,'VS Code','sm'))+
     step(2,'Claude dirige','<p>Entiende, clasifica la tarea en S/M/L y decide qué IA hace cada parte.</p>',lg('claude',cl,'Claude','sm'))+
-    step(3,'Cascada de IAs','<p><b>cascada.ps1</b> recorre la cadena del rol, de la IA más rápida a la siguiente.</p>'+roles+'<p class="note">Si una IA no responde en 30 s o da error, pasa a la siguiente. Agotada la cadena, resuelve Claude.</p>',lg('powershell',cat('orq'),'cascada','sm'))+
-    step(4,'Auditor','<p>Ninguna respuesta se usa sin pasar por el auditor.</p>'+checks+verd,lg(null,{color:'#1f9e89'},'Auditor','sm'))+
+    step(3,'Cascada de IAs','<p><b>cascada.ps1</b> recorre la cadena del rol: primero Codex (ChatGPT) y Gemini Plus como apoyo directo, después las IAs gratis. Claude dirige y audita siempre.</p>'+roles+'<p class="note">Si una IA no responde a tiempo (30 s; Codex 90 s y Gemini Plus 120 s) o da error, pasa a la siguiente. Agotada la cadena, resuelve Claude.</p>',lg('powershell',cat('orq'),'cascada','sm'))+
+    step(4,'Auditor','<p>Ninguna respuesta se usa sin pasar por el auditor.</p>'+checks+verd,lg('claude',cl,'Claude','sm'))+
     step(5,'Claude ejecuta','<p>Edita, corre y verifica en el workspace con lo que quedó aprobado.</p>',lg('claude',cl,'Claude','sm'))+
-    step(6,'Entrega','<p>Resumen corto: qué cambió, archivos, pruebas y pendientes. La decisión final es mía.</p>',lg(null,{color:'#0f8fb0'},'Entrega','sm'))+'</ol>';
+    step(6,'Entrega','<p>Resumen corto: qué cambió, archivos, pruebas y pendientes. La decisión final es mía.</p>',lg('claude',cl,'Claude','sm'))+'</ol>';
 }
 const chip2=(t,c)=>'<span class="chip" style="--sc:'+c+'">'+t+'</span>';
 function vMarco(){
@@ -202,21 +209,22 @@ function vBuscar(q){
   return '<section class="vh"><span class="bar"></span><div><h2>“'+esc(q)+'”</h2><p>'+its.length+' resultados'+(ch.length?' · '+ch.length+' chats':'')+'</p></div></section>'+list(its)+(ch.length?'<section class="reci"><h3 class="qh">Chats que coinciden <small>se abren en Claude Code</small></h3><div class="rgrid">'+ch.map(([p,s])=>'<a class="rc" href="'+chatU(s)+'"><span class="rp">'+esc(p)+'</span><span class="rt">'+esc(s.t)+'</span><span class="rf">'+esc(s.f)+'</span></a>').join('')+'</div></section>':'');
 }
 
-const VIEWS=['inicio','flujo','marco','salud','todo'].concat(D.categorias.map(c=>c.id));
+const VIEWS=['inicio','flujo','marco','salud','bq','todo','prog'].concat(D.categorias.map(c=>c.id));
 let view='inicio';
 function nb(v,t,ct,cc){return '<button class="nb" data-v="'+v+'"'+(cc?' style="--cc:'+cc+'"':'')+'><span class="dot"></span><span>'+esc(t)+'</span>'+(ct!=null?'<span class="ct">'+ct+'</span>':'')+'</button>'}
 function nav(){
   const g={};D.categorias.forEach(c=>(g[c.grupo]=g[c.grupo]||[]).push(c));
   let h='<div class="navg">Visión</div>'+nb('inicio','Inicio')+nb('flujo','Cómo fluye',null,'#d9773f')+nb('marco','Marco de trabajo',null,'#1f9e89')+nb('salud','Salud y uso',null,'#2fb34a')+nb('todo','Todo',ALL.length);
-  Object.keys(g).forEach(k=>{h+='<div class="navg">'+esc(k)+'</div>'+g[k].map(c=>nb(c.id,c.nombre,c.cuenta||c.items.length,c.color)).join('')});
+  Object.keys(g).forEach(k=>{h+='<div class="navg">'+esc(k)+'</div>'+g[k].map(c=>nb(c.id,c.nombre,c.cuenta||c.items.length,c.color)).join('')+(k==='Proyectos'?nb('prog','Programación',null,'#0f8fb0'):'')});
+  h+='<div class="navg">BigQuery</div>'+nb('bq','Reportes',(window.BQ||{objetos:[]}).objetos.length,'#4285f4');
   $('#nav').innerHTML=h;
 }
 function go(v,keep){
   if(!VIEWS.includes(v))v='inicio';
   if(v!==view)fil='';view=v;$('#q').value='';
   const m=$('#main');
-  m.innerHTML=v==='inicio'?vInicio():v==='flujo'?vFlujo():v==='marco'?vMarco():v==='salud'?vSalud():v==='todo'?vTodo():vCat(v);
-  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  m.innerHTML=v==='prog'?(window.PROG?PROG.html():''):v==='inicio'?vInicio():v==='flujo'?vFlujo():v==='marco'?vMarco():v==='salud'?vSalud():v==='bq'?vBq():v==='todo'?vTodo():vCat(v);
+  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='prog'&&window.PROG)PROG.init();
   const on=$('.nb.on');if(on&&on.scrollIntoView&&getComputedStyle($('#nav')).flexDirection==='row')on.scrollIntoView({block:'nearest',inline:'center'});
   try{localStorage.setItem('inf-view',v)}catch(e){}
   try{history.replaceState(null,'','#'+v)}catch(e){}
@@ -302,23 +310,40 @@ function proyPanel(){
   return '<h3 class="sub">Gasto por proyecto</h3><div class="pfil"><select id="pfSel">'+op('sem','Semana en curso')+op('hoy','Hoy')+op('ayer','Ayer')+op('mes','Mes en curso')+op('ano','Año en curso')+op('todo','Todo el histórico')+ms.map(k=>op(k,MN[+k.slice(5)-1]+' '+k.slice(0,4))).join('')+op('rango','Rango de fechas…')+'</select><span id="pfRg"'+(PF.m==='rango'?'':' hidden')+'> desde <input type="date" id="pfD1" value="'+PF.d1+'"> hasta <input type="date" id="pfD2" value="'+PF.d2+'"></span></div><div id="proyBox">'+proyHtml()+'</div>';
 }
 document.addEventListener('change',e=>{const t=e.target;if(!t.id||!t.id.startsWith('pf'))return;if(t.id==='pfSel'){PF.m=t.value;const r=$('#pfRg');if(r)r.hidden=PF.m!=='rango'}else if(t.id==='pfD1')PF.d1=t.value;else if(t.id==='pfD2')PF.d2=t.value;const b=$('#proyBox');if(b)b.innerHTML=proyHtml()});
+
+let BQSEL='';
+function vBq(){
+  const B=window.BQ;if(!B)return '<section class="vh" style="--cc:#4285f4"><span class="bar"></span><div><h2>BigQuery reportes</h2><p>Falta bqdata.js: ejecuta generador/bq_reportes.py.</p></div></section>';
+  const os=B.objetos,n=x=>x==null||x===''?'—':Number(x).toLocaleString('es-CL');
+  const fl=o=>{const d=new Date(o.modms);return d.toLocaleDateString('sv-SE')+' '+d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',hour12:false})};const fr=o=>{if(!o.modms)return '<span class="mut">vista: depende de sus tablas</span>';const d=new Date(o.modms),h=(Date.now()-d)/36e5;return '<b>'+fl(o)+'</b> <span class="mut">('+(h<1?'hace '+Math.round(h*60)+' min':h<48?'hace '+Math.round(h)+' h':'hace '+Math.round(h/24)+' días')+')</span>'};
+  let h='<section class="vh" style="--cc:#4285f4"><span class="bar"></span><div><p class="kick">BigQuery · '+esc(B.proyecto)+'</p><h2>BigQuery reportes</h2><p>Dataset <b>'+esc(B.dataset)+'</b>: '+os.length+' objetos con todos sus campos y 15 filas de muestra. Hora según el reloj de este PC · datos leídos '+esc(B.generado)+' · se actualiza sola cada noche a las 23:00 o con el botón Actualizar.</p></div></section>';
+  h+='<div class="bqlist">'+os.map(o=>'<button class="bqb'+(o.n===BQSEL?' on':'')+'" data-bq="'+esc(o.n)+'"><b>'+esc(o.n)+'</b><span>'+o.tipo+' · '+o.campos.length+' campos'+(o.filas&&+o.filas?' · '+n(o.filas)+' filas':'')+'</span><span class="u">'+(o.modms?'act. '+fl(o):'—')+'</span><span class="x '+(o.excel==='1 hoja'?'ok':o.excel==='CSV'?'no':'')+'">Excel: '+(o.excel==='1 hoja'?'CSV, abre completo en Excel':'Excel .xlsb en varias hojas (Parte 1, Parte 2…)')+'</span></button>').join('')+'</div>';
+  const o=os.find(x=>x.n===BQSEL);
+  if(!o)return h+'<p class="mut">Elige una tabla para ver sus campos y 15 filas de muestra.</p>';
+  h+='<h3 class="sub">'+esc(o.n)+' <span class="mut">· '+o.tipo+'</span> <button class="bqdl" data-bqxl="'+esc(o.n)+'">⬇ Descargar '+(o.excel==='CSV'?'Excel (varias hojas)':'CSV completo')+'</button> <span id="bqxlst" class="mut"></span></h3><p>Última actualización de los datos: '+fr(o)+(o.filas&&+o.filas?' · '+n(o.filas)+' filas · '+n(o.mb)+' MB':'')+'</p>';
+  if(o.err)h+='<p class="mut">Sin muestra: '+(/403/.test(o.err)?'esta vista lee tablas de otro proyecto (project-service-cortex-dev) donde mi cuenta no tiene permiso; se muestran solo los campos.':esc(o.err))+'</p>';
+  h+='<div class="bqt"><table><thead><tr>'+o.campos.map(c=>'<th>'+esc(c.n)+'<small>'+esc(c.t)+'</small></th>').join('')+'</tr></thead><tbody>'+(o.muestra.length?o.muestra.map(r=>'<tr>'+r.map(v=>'<td>'+(v==null?'<i>∅</i>':esc(String(v)))+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="'+o.campos.length+'" class="mut">sin filas de muestra</td></tr>')+'</tbody></table></div>';
+  return h;
+}
 function vSalud(){
   return '<section class="vh" style="--cc:#2fb34a"><span class="bar"></span><div><p class="kick">Cómo trabajo</p><h2>Salud y uso</h2><p>Estado real de mis herramientas, el cupo semanal y lo que pesa en el contexto.'+(LOCAL?' Se actualiza solo.':' El estado en vivo solo está al abrir el archivo en mi PC.')+'</p></div></section><div id="saludBody">'+(LOCAL?'<p class="mut">Comprobando…</p>':'')+'</div>'+proyPanel();
 }
 function renderSalud(){
   const b=$('#saludBody');if(!b)return;const e=EST;
   const sec=(t,h)=>'<h3 class="sub">'+t+'</h3><div class="sizes">'+h+'</div>',card=(t,h,bad)=>'<div class="size'+(bad?' bad':'')+'"><h4>'+t+'</h4>'+h+'</div>';
-  if(!e){b.innerHTML=(LOCAL?sec('Estado',card('Servicio local apagado','<p>No responde 127.0.0.1:8799. Se reinicia solo al iniciar sesión (tarea AbrirServicioInfografia).</p>',1)):'');return}
+  if(!e){b.innerHTML=(LOCAL?sec('Estado',card('Servicio local apagado','<p>No responde 127.0.0.1:8799. Se reinicia solo al iniciar sesión (tarea AbrirServicioAreaTrabajo).</p>',1)):'');return}
   const dot=o=>'<span class="luz '+(o==null?'':o?'on':'off')+'"></span>',fila=(n,o)=>'<li>'+dot(o.ok)+'<b>'+n+'</b><span>'+esc(o.txt)+'</span></li>';
   const c=e.contexto,memAl=c.memory_md>6,dias=e.cupo.dias,pct=Math.min(100,Math.round((7-dias)/7*100));
   const ias=Object.entries(e.ias).sort((x,y)=>y[1].n-x[1].n);
   b.innerHTML=
    sec('Estado del sistema',card('Servicios','<ul class="fl">'+fila('Servicio local',{ok:true,txt:'activo'})+fila('Sesión BigQuery',e.gcloud)+fila('Copia a Drive',e.sync)+'</ul>'+(e.gcloud.ok===false?'<p class="alerta">⚠ Sesión vencida: pídeme “reautenticar gcloud”.</p>':''),e.gcloud.ok===false)+
      card('Dashboards','<ul class="fl">'+Object.entries(e.dash).map(([p,d])=>'<li>'+dot(d.arriba)+'<b>'+esc(d.n)+'</b><span>puerto '+p+'</span></li>').join('')+'</ul><p><button class="btn sm ghost stop" data-p="todos">■ Detener todos</button></p>'))+
-   sec('Cupo y contexto',card('Cupo de Claude (mi plan)','<div class="med"><i style="width:'+pct+'%"></i></div><p>Semana avanzada al <b>'+pct+' %</b> · reinicia el <b>viernes '+esc(String(e.cupo.reinicio).replace(/^\w+ /,'').slice(0,5).split('-').reverse().join('/'))+' 3:00</b> · faltan <b>'+String(dias).replace('.',',')+' días</b>.</p><p class="mut">La barra mide el tiempo de la semana, no lo gastado: Claude no deja leer el consumo real desde el PC. Para eso usa /usage en Claude Code. No hay cupo diario: el plan tiene un límite semanal y otro por sesión de 5 horas. Los tokens medidos por día están en Ahorro de tokens.</p>')+
+   sec('Cupo y contexto',card('Cupo de Claude (mi plan)',e.cupo.semana?usoReal(e.cupo):'<div class="med"><i style="width:'+pct+'%"></i></div><p>Semana avanzada al <b>'+pct+' %</b> · reinicia el <b>viernes '+esc(String(e.cupo.reinicio).replace(/^\w+ /,'').slice(0,5).split('-').reverse().join('/'))+' 3:00</b> · faltan <b>'+String(dias).replace('.',',')+' días</b>.</p><p class="mut">La barra mide el tiempo de la semana, no lo gastado: Claude no deja leer el consumo real desde el PC. Para eso usa /usage en Claude Code. No hay cupo diario: el plan tiene un límite semanal y otro por sesión de 5 horas. Los tokens medidos por día están en Ahorro de tokens.</p>')+
      card('Qué pesa en mi contexto','<ul class="fl"><li><b>CLAUDE.md global</b><span>'+kbf(c.claude_md)+'</span></li><li><b>MEMORY.md</b><span>'+kbf(c.memory_md)+(memAl?' · ⚠ pasa de 6 KB':'')+'</span></li><li><b>Reglas</b><span>'+kbf(c.reglas_kb)+' · bajo demanda</span></li><li><b>Orquestación</b><span>'+kbf(c.orq_kb)+' · bajo demanda</span></li></ul><p class="mut">Carga fija en cada chat: ~'+kbf(Math.round((c.claude_md+c.memory_md)*10)/10)+'.</p>',memAl))+
    '';
 }
+function modelosTabla(m){if(!m||!m.claude)return '';const K=n=>n>=1e6?(n/1e6).toFixed(1).replace('.',',')+' M':n>=1e3?Math.round(n/1e3)+' K':String(n),P=x=>x.toFixed(1).replace('.',',')+' %',C=m.claude,ks=Object.keys(C).sort((a,b)=>C[b].usd-C[a].usd),tot=ks.reduce((s,k)=>s+C[k].ent+C[k].sal+C[k].cce+C[k].ccl,0)||1,usd=ks.reduce((s,k)=>s+C[k].usd,0)||1,W='style="overflow-x:auto;font-size:.85em"',T='style="white-space:nowrap;padding:.3rem .5rem"';let h='<p style="margin:.9rem 0 .3rem"><b>Consumo por modelo</b> <span class="mut">· desde '+esc(m.desde)+'</span></p><div '+W+'><table class="tk"><tr><th>Modelo</th><th>Mensajes</th><th>Ent.+sal.</th><th>Caché</th><th>% tokens</th><th>% costo</th></tr>';ks.forEach(k=>{const x=C[k],es=x.ent+x.sal,ca=x.cce+x.ccl,t=es+ca;h+='<tr><td '+T+'>'+esc(k.charAt(0).toUpperCase()+k.slice(1))+'</td><td '+T+'>'+x.msgs.toLocaleString('es-CL')+'</td><td '+T+'>'+K(es)+'</td><td '+T+'>'+K(ca)+'</td><td '+T+'>'+P(100*t/tot)+'</td><td '+T+'>'+P(100*x.usd/usd)+'</td></tr>'});h+='</table></div>';const X=m.externas||{},xs=Object.keys(X).sort((a,b)=>X[b].ok-X[a].ok),nx=xs.reduce((s,k)=>s+X[k].ok+X[k].falla,0)||1;if(xs.length){h+='<p style="margin:.9rem 0 .3rem"><b>Otras IAs</b> <span class="mut">· llamadas (Codex con tokens más abajo)</span></p><div '+W+'><table class="tk"><tr><th>IA</th><th>OK</th><th>Fallas</th><th>% llamadas</th></tr>';xs.forEach(k=>{const x=X[k];h+='<tr><td '+T+'>'+esc(k)+'</td><td '+T+'>'+x.ok+'</td><td '+T+'>'+x.falla+'</td><td '+T+'>'+P(100*(x.ok+x.falla)/nx)+'</td></tr>'});h+='</table></div>'}const cx=m.codex;if(cx&&cx.ses){h+='<p style="margin:.9rem 0 .3rem"><b>Codex (ChatGPT Go)</b> <span class="mut">· cupo de '+cx.dias+' días · reinicia '+esc(cx.reinicio)+'</span></p><p style="margin:.2rem 0">Cupo usado <b>'+(cx.pct==null?'—':P(cx.pct))+'</b></p><div class="med"><i style="width:'+Math.min(100,cx.pct||0)+'%"></i></div><p class="mut" style="margin:.4rem 0 0">'+cx.ses+' sesiones · entrada '+K(cx.ent)+' · caché '+K(cx.cache)+' · salida '+K(cx.sal)+' · total '+K(cx.ent+cx.cache+cx.sal)+' tokens</p>'}return h}
+function usoReal(c){const b=(t,x)=>'<p style="margin:.5rem 0 .2rem"><b>'+t+' '+x.pct+' %</b> <span class="mut">· reinicia '+esc(x.reinicio)+'</span></p><div class="med"><i style="width:'+Math.min(100,x.pct)+'%"></i></div>';return b('Semana (7 días)',c.semana)+(c.sesion?b('Sesión (5 h)',c.sesion):'')+'<p class="mut">Uso real del plan, el mismo del panel Usage de VS Code; se actualiza solo. No hay cupo diario.</p>'+modelosTabla(EST&&EST.modelos)}
 async function leeEstado(){if(!LOCAL)return;try{const r=await fetch(SRV+'/estado');EST=await r.json()}catch(x){EST=null}pintaLuces();renderSalud()}
 if(LOCAL){setInterval(()=>{if(!document.hidden)leeEstado()},8000);setTimeout(leeEstado,300);new MutationObserver(()=>{pintaLuces();if($('#saludBody')&&$('#saludBody').textContent.startsWith('Comprobando'))renderSalud()}).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.stop');if(!b)return;e.preventDefault();e.stopPropagation();fetch(SRV+'/detener?p='+b.dataset.p,{mode:'no-cors'}).then(()=>{toast('Deteniendo…');setTimeout(leeEstado,1500)})},true)}
 document.addEventListener('click',e=>{
@@ -347,6 +372,9 @@ go(start||'inicio');
 sello();
 const rb=$('#refresh');if(rb)rb.addEventListener('click',()=>recargar(1));
 setInterval(()=>recargar(0),60000);
+document.addEventListener('click',e=>{const x=e.target.closest&&e.target.closest('[data-bqxl]');if(!x)return;const t=x.dataset.bqxl,st=()=>$('#bqxlst');if(!LOCAL){toast('La descarga solo funciona en tu PC');return}x.disabled=true;fetch('http://127.0.0.1:8799/bqxl?t='+encodeURIComponent(t)).then(()=>{const iv=setInterval(()=>fetch('http://127.0.0.1:8799/bqxl-estado?t='+encodeURIComponent(t)).then(r=>r.json()).then(j=>{const s=st();if(s)s.textContent=j.msg||'';if(j.est==='listo'||j.est==='error'){clearInterval(iv);x.disabled=false;toast(j.est==='listo'?'Listo: archivo completo en Descargas/BigQuery-Excel':'Error: '+j.msg)}}).catch(()=>{}),3000)}).catch(()=>{x.disabled=false;toast('Servicio local apagado')})});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-bq]');if(!b)return;BQSEL=b.dataset.bq;go('bq',true);const t=document.querySelector('.bqt');if(t)t.scrollIntoView({block:'start'})});
+window.INF={go,link,toast,esc,LOCAL,SRV,view:()=>view};
 })();
 
 // Cabecera con nombre e iniciales tomados de data.js

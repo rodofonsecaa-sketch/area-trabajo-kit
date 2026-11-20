@@ -1,4 +1,4 @@
-# Infografía «Cómo trabajo hoy» (kit)
+# Área de Trabajo «Área de Trabajo» (kit)
 
 Página que muestra con qué trabajas en Claude Code: herramientas, IAs, conectores, skills, scripts y proyectos, con panel de salud, panel de uso y botones que abren tus archivos. Diseño Aurora 2.
 

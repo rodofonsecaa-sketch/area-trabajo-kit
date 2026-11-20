@@ -55,7 +55,7 @@ def chats(data_txt, maximo=5):
     fs = glob.glob("\\\\?\\" + R + "\\*\\*.jsonl") if os.name == "nt" else glob.glob(R + "/*/*.jsonl")
     ses, P = [], proyectos(data_txt)
     claves = sorted({a.strip("/") for _, al in P for a in al})
-    cf = os.path.join(os.environ.get("TEMP", R), "infografia-chats-cache.json")  # caché por (mtime, tamaño): solo relee los chats que cambiaron
+    cf = os.path.join(os.environ.get("TEMP", R), "area-trabajo-chats-cache.json")  # caché por (mtime, tamaño): solo relee los chats que cambiaron
     try: cache = json.load(open(cf, encoding="utf-8"))
     except (OSError, ValueError): cache = {}
     if cache.get("claves") != claves: cache = {"claves": claves}
@@ -74,13 +74,13 @@ def chats(data_txt, maximo=5):
     except OSError: pass
     out = {}
     pts = [[sum(low.count(a) for a in al) + (20 if any(a in s["cwd"].replace("\\", "/") + "/" for a in al) else 0) for _, al in P] for low, s in ses]
-    infog = [i for i, (n, al) in enumerate(P) if "/infografia/" in al]
+    infog = [i for i, (n, al) in enumerate(P) if "/area-de-trabajo/" in al or "/infografia/" in al]
     for pi, (nom, al) in enumerate(P):
         hits = []
         for si, (low, s) in enumerate(ses):
             k, top = pts[si][pi], max(pts[si])
             if k >= 10 and k >= 0.6 * top: hits.append(dict(s, m=k))
-        if not hits:  # respaldo: chats donde se pidió o mencionó la carpeta (fuera de los chats de esta infografía)
+        if not hits:  # respaldo: chats donde se pidió o mencionó la carpeta (fuera de los chats de esta Área de Trabajo)
             for si, (low, s) in enumerate(ses):
                 k = sum(s["raw"].get(a.strip("/"), 0) for a in al)
                 if k >= 10 and not any(pts[si][i] == max(pts[si]) > 0 for i in infog): hits.append(dict(s, m=k))
