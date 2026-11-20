@@ -169,7 +169,6 @@ function vCat(id){
   }
   const es=[...new Set(c.items.map(i=>i.e))];
   return '<section class="vh" style="--cc:'+c.color+'"><span class="bar"></span><div><p class="kick">'+esc(c.grupo)+'</p><h2>'+esc(c.nombre)+'</h2><p>'+esc(c.desc)+' · '+(c.cuenta||c.items.length)+'</p></div></section>'+'<p class="cnota">El número de cada tarjeta es su orden por última modificación: 1 = lo más reciente.'+(id==='ia'?' (Aquí el orden principal es por uso.)':'')+'</p>'+(c.nota?'<p class="cnota">'+esc(c.nota)+'</p>':'')+iaNota+(id==='pro'?'<div class="acts" style="margin:4px 0 14px"><button class="btn pri" data-v="prog">⚙ Programación: encender, horarios y destinatarios</button></div>':'')+
-    (id==='skills'&&A.skills?'<div class="inst"><b>Las '+A.skills.length+' skills instaladas</b><div class="acts">'+A.skills.map(s=>link(s.r,esc(s.n)+' <small>SKILL.md</small>')).join('')+'</div></div>':'')+
     (es.length>1?'<div class="fil"><button class="fb'+(fil?'':' on')+'" data-f="">Todos</button>'+es.map(e=>'<button class="fb'+(fil===e?' on':'')+'" data-f="'+e+'">'+esc(D.estados[e]||e)+'</button>').join('')+'</div>':'')+list(its)+(id==='ahorro'?usoPanel():'');
 }
 function vTodo(){
