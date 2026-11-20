@@ -238,7 +238,7 @@ if(CFG.fx)document.addEventListener('pointermove',e=>{const c=e.target.closest&&
 function sheet(i){
   const c=i.cat;
   let h='<div class="sh-h">'+lgs(i,'big')+'</div><p class="sh-c">'+esc(c.nombre)+'</p><h2>'+esc(i.n)+'</h2><p class="sh-d">'+esc(i.d)+'</p><div class="meta">'+chip(i.e)+tag(i)+'</div>'+qa(i);
-  if(i.ap)h+='<h4 class="shs">A qué se dedica</h4><p class="sh-d">'+esc(i.ap.a)+'</p><h4 class="shs">Cómo me ayuda</h4><ul class="inc">'+i.ap.c.map(x=>'<li><div><span>'+esc(x)+'</span></div></li>').join('')+'</ul><h4 class="shs">Cuándo la uso</h4><p class="sh-d">'+esc(i.ap.u)+'</p>';
+  if(i.ap)h+='<h4 class="shs">A qué se dedica</h4><p class="sh-d">'+esc(i.ap.a)+'</p><h4 class="shs">Cómo me ayuda</h4><ul class="inc">'+i.ap.c.map(x=>'<li><div><span>'+esc(x)+'</span></div></li>').join('')+'</ul><h4 class="shs">Cuándo la uso</h4><p class="sh-d">'+esc(i.ap.u)+'</p>'+(i.ap.p?'<h4 class="shs">Prompt para compartir</h4><p class="sh-d">'+esc(i.ap.p)+'</p><div class="acts"><a class="btn pri" href="#" data-copy="'+esc(i.ap.p)+'">Copiar prompt</a></div>':'');
   if(i.ruta)h+='<h4 class="shs">Carpeta y archivos</h4><div class="acts">'+link(i.ruta,'Abrir carpeta','pri')+(i.ver||[]).filter(v=>!PC.test(v.r)||!(window.PBIS||{})[i.n]).map(v=>link(v.r,esc(v.t)+' <small>'+ext(v.r)+'</small>')).join('')+((window.PBIS||{})[i.n]||[]).map(r=>link(r,'Abrir en mi PC · '+esc(r.split('/').pop()),'pc')).join('')+'<button class="btn" data-copy="'+esc(full(i.ruta))+'">Copiar ruta</button></div><p class="path">'+esc(full(i.ruta))+'</p>';
   h+=chatsH(i);
   if(i.inc&&i.inc.length)h+='<h4 class="shs">Incluye ('+i.inc.length+')</h4><ul class="inc">'+i.inc.map(x=>'<li><div><b>'+esc(x.n)+'</b><span>'+esc(x.d)+'</span></div>'+link(x.r,'Abrir <small>'+ext(x.r)+'</small>')+'</li>').join('')+'</ul>';
@@ -250,7 +250,7 @@ function sheet(i){
 let tt;
 function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(tt);tt=setTimeout(()=>e.hidden=true,2600)}
 function copy(t){
-  const ok=()=>toast('Ruta copiada: '+t);
+  const ok=()=>toast(t.length>60?'Prompt copiado':'Ruta copiada: '+t);
   try{navigator.clipboard.writeText(t).then(ok,()=>toast(t))}catch(e){toast(t)}
 }
 const FS=window.FILES||{};
@@ -360,7 +360,7 @@ document.addEventListener('click',e=>{
   if(vb){if(vb.dataset.back!=null){pila.pop();ver(pila[pila.length-1],1)}else ver(vb.dataset.ver);return}
   const t=e.target.closest('[data-v],[data-k],[data-f],[data-r],[data-copy],[data-close]');if(!t)return;
   if(t.dataset.close!=null){$('#sheet').hidden=true;return}
-  if(t.dataset.copy){copy(t.dataset.copy);return}
+  if(t.dataset.copy){e.preventDefault();copy(t.dataset.copy);return}
   if(t.dataset.r!=null){if(!LOCAL){e.preventDefault();pila=[];ver(t.dataset.r)}return}
   if(t.dataset.f!=null){fil=t.dataset.f;go(view,1);return}
   if(t.dataset.k!=null){sheet(ALL[+t.dataset.k]);return}
