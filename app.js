@@ -141,7 +141,7 @@ function chat(){
   return '<section class="term" aria-label="Ejemplo de una sesión"><div class="tbar"><i></i><i></i><i></i><span>Claude Code · VS Code · ejemplo de una sesión</span></div><div class="tlog">'+
     L2.map((l,j)=>'<p class="tl '+l[0]+'" style="--d:'+(j*.9)+'s"><span class="who">'+({u:esc((window.DATA.autor||'').split(' ')[0]),c:'Claude',t:'IA',a:'Auditor'})[l[0]]+'</span>'+esc(l[1])+'</p>').join('')+'<p class="tl cur" style="--d:'+(L2.length*.9)+'s"><span class="who">›</span><span class="caret"></span></p></div></section>';
 }
-let fil='';
+let fil='',gfil='';
 function usoPanel(){
   const U=window.USO;if(!U||!U.dias)return '';
   const ds=U.dias,hoy=new Date(),iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),add=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
@@ -164,7 +164,7 @@ function usoPanel(){
   return tabla+proy;
 }
 function vCat(id){
-  const c=cat(id),its=c.items.filter(i=>!fil||i.e===fil);
+  const c=cat(id),its=c.items.filter(i=>(!fil||i.e===fil)&&(id!=='skills'||!gfil||i.g===gfil));
   let iaNota='';
   if(id==='ia'&&window.USO&&USO.ias){
     const K=[['groq','Groq'],['flash','Gemini 3.5 Flash'],['codestral','Codestral'],['nemvl','Nemotron 3.5 Super'],['ultra','Nemotron 3 Ultra'],['laguna','Laguna'],['codex','Codex CLI']],q=i=>{const k=K.find(x=>i.n.includes(x[1]));return k?(USO.ias[k[0]]||0):0};
@@ -172,8 +172,8 @@ function vCat(id){
     iaNota='<p class="cnota">Ordenadas por uso real, de la que más uso a la que menos (según cascada.log): '+K.filter(k=>USO.ias[k[0]]).sort((x,y)=>USO.ias[y[0]]-USO.ias[x[0]]).map(k=>k[1]+' '+USO.ias[k[0]]).join(' · ')+'. Las que no aparecen aún no las he usado.</p>';
   }
   const es=[...new Set(c.items.map(i=>i.e))];
-  return '<section class="vh" style="--cc:'+c.color+'"><span class="bar"></span><div><p class="kick">'+esc(c.grupo)+'</p><h2>'+esc(c.nombre)+'</h2><p>'+esc(c.desc)+' · '+(c.cuenta||c.items.length)+'</p></div></section>'+(id==='skills'?'':'<p class="cnota">El número de cada tarjeta es su orden por última modificación: 1 = lo más reciente.'+(id==='ia'?' (Aquí el orden principal es por uso.)':'')+'</p>')+(c.nota?'<p class="cnota">'+esc(c.nota)+'</p>':'')+iaNota+(id==='pro'?'<div class="acts" style="margin:4px 0 14px"><button class="btn pri" data-v="prog">⚙ Programación: encender, horarios y destinatarios</button></div>':'')+
-    (es.length>1?'<div class="fil"><button class="fb'+(fil?'':' on')+'" data-f="">Todos</button>'+es.map(e=>'<button class="fb'+(fil===e?' on':'')+'" data-f="'+e+'">'+esc(D.estados[e]||e)+'</button>').join('')+'</div>':'')+(id==='skills'?[...new Set(its.map(i=>i.g))].map(g=>'<h3 class="sec" style="--cc:'+c.color+'"><i></i>'+esc(g)+' <small>'+its.filter(i=>i.g===g).length+'</small></h3>'+list(its.filter(i=>i.g===g))).join(''):list(its))+(id==='ahorro'?usoPanel():'');
+  return '<section class="vh" style="--cc:'+c.color+'"><span class="bar"></span><div><p class="kick">'+esc(c.grupo)+'</p><h2>'+esc(c.nombre)+'</h2><p>'+esc(c.desc)+' · '+(c.cuenta||c.items.length)+'</p></div>'+(id==='skills'?'<select class="gsel" id="gsel" aria-label="Filtrar por categoría"><option value="">Todas las categorías ('+c.items.length+')</option>'+[...new Set(c.items.map(i=>i.g))].map((g,gi)=>'<option value="'+esc(g)+'"'+(gfil===g?' selected':'')+'>'+esc(g)+' ('+c.items.filter(i=>i.g===g).length+')</option>').join('')+'</select>':'')+'</section>'+(id==='skills'?'':'<p class="cnota">El número de cada tarjeta es su orden por última modificación: 1 = lo más reciente.'+(id==='ia'?' (Aquí el orden principal es por uso.)':'')+'</p>')+(c.nota?'<p class="cnota">'+esc(c.nota)+'</p>':'')+iaNota+(id==='pro'?'<div class="acts" style="margin:4px 0 14px"><button class="btn pri" data-v="prog">⚙ Programación: encender, horarios y destinatarios</button></div>':'')+
+    (es.length>1?'<div class="fil"><button class="fb'+(fil?'':' on')+'" data-f="">Todos</button>'+es.map(e=>'<button class="fb'+(fil===e?' on':'')+'" data-f="'+e+'">'+esc(D.estados[e]||e)+'</button>').join('')+'</div>':'')+(id==='skills'?[...new Set(its.map(i=>i.g))].map((g,gi)=>'<h3 class="sec" id="g-'+gi+'" style="--cc:'+c.color+'"><i></i>'+esc(g)+' <small>'+its.filter(i=>i.g===g).length+'</small></h3>'+list(its.filter(i=>i.g===g))).join(''):list(its))+(id==='ahorro'?usoPanel():'');
 }
 function vTodo(){
   return '<section class="vh"><span class="bar"></span><div><h2>Todo</h2><p>'+ALL.length+' piezas: '+ALL.filter(i=>i.cat.grupo!=='Proyectos').length+' herramientas y '+ALL.filter(i=>i.cat.grupo==='Proyectos').length+' proyectos.</p></div></section>'+
@@ -224,7 +224,7 @@ function nav(){
 }
 function go(v,keep){
   if(!VIEWS.includes(v))v='inicio';
-  if(v!==view)fil='';view=v;$('#q').value='';
+  if(v!==view){fil='';gfil=''}view=v;$('#q').value='';
   const m=$('#main');
   m.innerHTML=v==='prog'?(window.PROG?PROG.html():''):v==='inicio'?vInicio():v==='flujo'?vFlujo():v==='marco'?vMarco():v==='salud'?vSalud():v==='bq'?vBq():v==='todo'?vTodo():vCat(v);
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='prog'&&window.PROG)PROG.init();
@@ -348,7 +348,8 @@ function renderSalud(){
 function modelosTabla(m){if(!m||!m.claude)return '';const K=n=>n>=1e6?(n/1e6).toFixed(1).replace('.',',')+' M':n>=1e3?Math.round(n/1e3)+' K':String(n),P=x=>x.toFixed(1).replace('.',',')+' %',C=m.claude,ks=Object.keys(C).sort((a,b)=>C[b].usd-C[a].usd),tot=ks.reduce((s,k)=>s+C[k].ent+C[k].sal+C[k].cce+C[k].ccl,0)||1,usd=ks.reduce((s,k)=>s+C[k].usd,0)||1,W='style="overflow-x:auto;font-size:.85em"',T='style="white-space:nowrap;padding:.3rem .5rem"';let h='<p style="margin:.9rem 0 .3rem"><b>Consumo por modelo</b> <span class="mut">· desde '+esc(m.desde)+'</span></p><div '+W+'><table class="tk"><tr><th>Modelo</th><th>Mensajes</th><th>Ent.+sal.</th><th>Caché</th><th>% tokens</th><th>% costo</th></tr>';ks.forEach(k=>{const x=C[k],es=x.ent+x.sal,ca=x.cce+x.ccl,t=es+ca;h+='<tr><td '+T+'>'+esc(k.charAt(0).toUpperCase()+k.slice(1))+'</td><td '+T+'>'+x.msgs.toLocaleString('es-CL')+'</td><td '+T+'>'+K(es)+'</td><td '+T+'>'+K(ca)+'</td><td '+T+'>'+P(100*t/tot)+'</td><td '+T+'>'+P(100*x.usd/usd)+'</td></tr>'});h+='</table></div>';const X=m.externas||{},xs=Object.keys(X).sort((a,b)=>X[b].ok-X[a].ok),nx=xs.reduce((s,k)=>s+X[k].ok+X[k].falla,0)||1;if(xs.length){h+='<p style="margin:.9rem 0 .3rem"><b>Otras IAs</b> <span class="mut">· llamadas (Codex con tokens más abajo)</span></p><div '+W+'><table class="tk"><tr><th>IA</th><th>OK</th><th>Fallas</th><th>% llamadas</th></tr>';xs.forEach(k=>{const x=X[k];h+='<tr><td '+T+'>'+esc(k)+'</td><td '+T+'>'+x.ok+'</td><td '+T+'>'+x.falla+'</td><td '+T+'>'+P(100*(x.ok+x.falla)/nx)+'</td></tr>'});h+='</table></div>'}const cx=m.codex;if(cx&&cx.ses){h+='<p style="margin:.9rem 0 .3rem"><b>Codex (ChatGPT Go)</b> <span class="mut">· cupo de '+cx.dias+' días · reinicia '+esc(cx.reinicio)+'</span></p><p style="margin:.2rem 0">Cupo usado <b>'+(cx.pct==null?'—':P(cx.pct))+'</b></p><div class="med"><i style="width:'+Math.min(100,cx.pct||0)+'%"></i></div><p class="mut" style="margin:.4rem 0 0">'+cx.ses+' sesiones · entrada '+K(cx.ent)+' · caché '+K(cx.cache)+' · salida '+K(cx.sal)+' · total '+K(cx.ent+cx.cache+cx.sal)+' tokens</p>'}return h}
 function usoReal(c){const b=(t,x)=>'<p style="margin:.5rem 0 .2rem"><b>'+t+' '+x.pct+' %</b> <span class="mut">· reinicia '+esc(x.reinicio)+'</span></p><div class="med"><i style="width:'+Math.min(100,x.pct)+'%"></i></div>';return b('Semana (7 días)',c.semana)+(c.sesion?b('Sesión (5 h)',c.sesion):'')+'<p class="mut">Uso real del plan, el mismo del panel Usage de VS Code; se actualiza solo. No hay cupo diario.</p>'+modelosTabla(EST&&EST.modelos)}
 async function leeEstado(){if(!LOCAL)return;try{const r=await fetch(SRV+'/estado');EST=await r.json()}catch(x){EST=null}pintaLuces();renderSalud()}
-if(LOCAL){setInterval(()=>{if(!document.hidden)leeEstado()},8000);setTimeout(leeEstado,300);new MutationObserver(()=>{pintaLuces();if($('#saludBody')&&$('#saludBody').textContent.startsWith('Comprobando'))renderSalud()}).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.stop');if(!b)return;e.preventDefault();e.stopPropagation();fetch(SRV+'/detener?p='+b.dataset.p,{mode:'no-cors'}).then(()=>{toast('Deteniendo…');setTimeout(leeEstado,1500)})},true)}
+if(LOCAL){setInterval(()=>{if(!document.hidden)leeEstado()},8000);setTimeout(leeEstado,300);new MutationObserver(()=>{pintaLuces();if($('#saludBody')&&$('#saludBody').textContent.startsWith('Comprobando'))renderSalud()}).observe(document.body,{childList:true,subtree:true});document.addEventListener('change',e=>{const t=e.target;if(t&&t.id==='gsel'){gfil=t.value;go(view,1);window.scrollTo({top:0,behavior:'smooth'})}});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.stop');if(!b)return;e.preventDefault();e.stopPropagation();fetch(SRV+'/detener?p='+b.dataset.p,{mode:'no-cors'}).then(()=>{toast('Deteniendo…');setTimeout(leeEstado,1500)})},true)}
 document.addEventListener('click',e=>{
   const a=e.target.closest&&e.target.closest('a[href^="abrir:"]');if(!a||!LOCAL)return;
   e.preventDefault();e.stopPropagation();const u=a.getAttribute('href');
@@ -379,6 +380,7 @@ document.addEventListener('click',e=>{const x=e.target.closest&&e.target.closest
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-bq]');if(!b)return;BQSEL=b.dataset.bq;go('bq',true);const t=document.querySelector('.bqt');if(t)t.scrollIntoView({block:'start'})});
 window.INF={go,link,toast,esc,LOCAL,SRV,view:()=>view};
 })();
+
 
 // Cabecera con nombre e iniciales tomados de data.js
 ;(function(){var D=window.DATA||{},a=D.autor||'',b=document.querySelector('.brand');if(!b)return;b.querySelector('.mark').textContent=a.split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();b.querySelector('p').textContent=a+' · '+(D.rol||'')})();
