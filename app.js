@@ -81,7 +81,7 @@ const OPEN=/\.(html?|pbip|pbix|pdf|mp4|pptx|docx|xlsx|rbxlx)$/i;
 const mainTxt=(i,m)=>i.btn?'▶ '+i.btn:!/\.html?$/i.test(m.r)?'▶ Abrir en Power BI':/dashboard|reporte/i.test(i.n)?'▶ Abrir dashboard':/curso/i.test(i.n)?'▶ Abrir curso':/web|callumbra|umbra/i.test(i.n)?'▶ Abrir web':'▶ Abrir página';
 const MAIN=/\.(html?|pbip|pbix)$/i;
 const qa=i=>{const all=(i.ver||[]).filter(v=>OPEN.test(v.r)),m=i.go?null:all.find(v=>MAIN.test(v.r)),f=all.filter(v=>v!==m).slice(0,2),a=i.art||[];if(!i.go&&!m&&!i.ruta&&!f.length&&!a.length)return'';
-  return '<span class="qa">'+(i.go?'<a class="btn pri sm" href="'+(i.go.u?esc(i.go.u)+'" target="_blank" rel="noopener':'abrir:'+esc(i.go.a))+'" title="'+(i.go.u?'Abre el sitio':'Levanta el proyecto y lo abre en el navegador')+'">▶ '+esc(i.go.t)+'</a>':'')+luz(i)+(m?link(m.r,mainTxt(i,m),'pri sm'):'')+f.map(v=>link(v.r,esc(v.t)+' <small>'+ext(v.r)+'</small>','sm')).join('')+(a.length?alink(a[0],'Artefacto ↗'+(a.length>1?' <small>+'+(a.length-1)+'</small>':''),'sm'):'')+(i.ruta?link(i.ruta,'Carpeta','sm ghost'):'')+'</span>'};
+  return '<span class="qa">'+(i.go?'<a class="btn pri sm" href="'+(i.go.u?esc(i.go.u)+'" target="_blank" rel="noopener':'abrir:'+esc(i.go.a))+'" title="'+(i.go.u?'Abre el sitio':'Levanta el proyecto y lo abre en el navegador')+'">▶ '+esc(i.go.t)+'</a>':'')+luz(i)+(m?link(m.r,mainTxt(i,m),'pri sm'):'')+f.map(v=>link(v.r,esc(v.t)+' <small>'+ext(v.r)+'</small>','sm')).join('')+(a.length?alink(a[0],'Artefacto ↗'+(a.length>1?' <small>+'+(a.length-1)+'</small>':''),'sm'):'')+(i.ruta?link(i.ruta,'Carpeta','sm ghost'):'')+(i.cat&&i.cat.id==='auto'?'<a class="btn sm" href="#" data-prog="'+esc(i.n)+'" title="Encender, programar y enviar">Programación</a>':'')+'</span>'};
 
 const qa2=i=>qa(i)||((i.src||[])[0]?'<span class="qa">'+link(i.src[0].r,esc(i.src[0].t),'sm')+'</span>':'');
 const chatU=s=>'vscode://anthropic.claude-code/open?session='+encodeURIComponent(s.id);
@@ -218,7 +218,7 @@ function nb(v,t,ct,cc){return '<button class="nb" data-v="'+v+'"'+(cc?' style="-
 function nav(){
   const g={};D.categorias.forEach(c=>(g[c.grupo]=g[c.grupo]||[]).push(c));
   let h='<div class="navg">Visión</div>'+nb('inicio','Inicio')+nb('flujo','Cómo fluye',null,'#d9773f')+nb('marco','Marco de trabajo',null,'#1f9e89')+nb('salud','Salud y uso',null,'#2fb34a')+nb('todo','Todo',ALL.length);
-  Object.keys(g).forEach(k=>{h+='<div class="navg">'+esc(k)+'</div>'+g[k].map(c=>nb(c.id,c.nombre,c.cuenta||c.items.length,c.color)).join('')+(k==='Proyectos'?nb('prog','Programación',null,'#0f8fb0'):'')});
+  Object.keys(g).forEach(k=>{h+='<div class="navg">'+esc(k)+'</div>'+g[k].map(c=>nb(c.id,c.nombre,c.cuenta||c.items.length,c.color)).join('')});
   h+='<div class="navg">BigQuery</div>'+nb('bq','Reportes',(window.BQ||{objetos:[]}).objetos.length,'#4285f4');
   $('#nav').innerHTML=h;
 }
